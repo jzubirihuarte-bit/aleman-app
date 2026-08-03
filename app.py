@@ -58,10 +58,11 @@ st.divider()
 # PESTAÑAS
 # =====================================================
 
-tab1, tab2, tab3 = st.tabs(
+tab1, tab2, tab3, tab4 = st.tabs(
     [
         "📚 Vocabulario",
         "📝 Verbos",
+        "💬 Frases",
         "🎯 Examen"
     ]
 )
@@ -316,12 +317,159 @@ with tab2:
         )
 
         st.rerun()
+        
+
+# =====================================================
+# FRASES
+# =====================================================
+
+with tab3:
+
+    st.header("💬 Frases")
+
+    @st.cache_data
+    def cargar_frases():
+        return pd.read_excel(
+            "datos/frases_aleman_100.xlsx"
+        )
+
+    frases = cargar_frases()
+
+    modo = st.radio(
+        "Modo de práctica",
+        [
+            "🇩🇪 Alemán → Español",
+            "🇪🇸 Español → Alemán"
+        ]
+    )
+
+    if "indice_frase" not in st.session_state:
+        st.session_state.indice_frase = (
+            frases.sample().index[0]
+        )
+
+    fila = frases.loc[
+        st.session_state.indice_frase
+    ]
+
+    frase_aleman = fila["Frase alemán"]
+    frase_espanol = fila["Frase español"]
+
+    # ===== ALEMÁN -> ESPAÑOL =====
+
+    if modo == "🇩🇪 Alemán → Español":
+
+        st.subheader("Traduce al español:")
+
+        st.info(frase_aleman)
+
+        respuesta = st.text_area(
+            "Tu traducción",
+            key="frase_es"
+        )
+
+        if st.button(
+            "Comprobar frase ES"
+        ):
+
+            if (
+                respuesta.strip().lower()
+                ==
+                frase_espanol.strip().lower()
+            ):
+
+                st.success(
+                    "✅ Correcto"
+                )
+
+                st.session_state.aciertos += 1
+
+            else:
+
+                st.session_state.fallos += 1
+
+                st.error(
+                    f"Correcto: "
+                    f"{frase_espanol}"
+                )
+
+    # ===== ESPAÑOL -> ALEMÁN =====
+
+    else:
+
+        st.subheader(
+            "Escribe la frase en alemán:"
+        )
+
+        st.info(frase_espanol)
+
+        respuesta = st.text_area(
+            "Tu respuesta",
+            key="frase_de"
+        )
+
+        if st.button(
+            "Comprobar frase DE"
+        ):
+
+            if (
+                respuesta.strip().lower()
+                ==
+                frase_aleman.strip().lower()
+            ):
+
+                st.success(
+                    "✅ Correcto"
+                )
+
+                st.session_state.aciertos += 1
+
+            else:
+
+                st.session_state.fallos += 1
+
+                st.error(
+                    f"Correcto: "
+                    f"{frase_aleman}"
+                )
+
+    st.write("")
+
+    if st.button(
+        "➡️ Siguiente frase"
+    ):
+
+        nuevo_indice = (
+            frases.sample().index[0]
+        )
+
+        while (
+            nuevo_indice
+            ==
+            st.session_state.indice_frase
+        ):
+            nuevo_indice = (
+                frases.sample().index[0]
+            )
+
+        st.session_state.indice_frase = (
+            nuevo_indice
+        )
+
+        st.rerun()
+
+    if "Adjetivo/Concepto" in fila:
+
+        st.caption(
+            f"💡 Concepto principal: "
+            f"{fila['Adjetivo/Concepto']}"
+        )
 
 # =====================================================
 # EXAMEN (FUTURO)
 # =====================================================
 
-with tab3:
+with tab4:
 
     st.header("🎯 Examen mixto")
 
