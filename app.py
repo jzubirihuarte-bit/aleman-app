@@ -1,23 +1,22 @@
 import streamlit as st
 import pandas as pd
+import random
 
-# Configuración de la página
+# =====================================================
+# CONFIGURACIÓN GENERAL
+# =====================================================
+
 st.set_page_config(
     page_title="Entrenador de Alemán",
     page_icon="🇩🇪",
     layout="centered"
 )
 
-# Cargar Excel
-@st.cache_data
-def cargar_datos():
-    return pd.read_excel("sustantivos_aleman_100_mas_sin_frases.xlsx")
+st.title("🇩🇪 Entrenador de Alemán")
 
-df = cargar_datos()
-
-# Inicialización de variables de sesión
-if "indice" not in st.session_state:
-    st.session_state.indice = df.sample().index[0]
+# =====================================================
+# ESTADÍSTICAS GLOBALES
+# =====================================================
 
 if "aciertos" not in st.session_state:
     st.session_state.aciertos = 0
@@ -25,86 +24,322 @@ if "aciertos" not in st.session_state:
 if "fallos" not in st.session_state:
     st.session_state.fallos = 0
 
-fila = df.loc[st.session_state.indice]
 
-st.title("🇩🇪 Practica Alemán")
-
-# Estadísticas
 total = st.session_state.aciertos + st.session_state.fallos
 
 if total > 0:
-    porcentaje = round(st.session_state.aciertos / total * 100, 1)
+    porcentaje = round(
+        st.session_state.aciertos / total * 100,
+        1
+    )
 else:
     porcentaje = 0
 
 col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.metric("✅ Aciertos", st.session_state.aciertos)
+col1.metric(
+    "✅ Aciertos",
+    st.session_state.aciertos
+)
 
-with col2:
-    st.metric("❌ Fallos", st.session_state.fallos)
+col2.metric(
+    "❌ Fallos",
+    st.session_state.fallos
+)
 
-with col3:
-    st.metric("% Éxito", porcentaje)
+col3.metric(
+    "% Éxito",
+    porcentaje
+)
 
 st.divider()
 
-palabra = fila["Palabra en alemán"]
+# =====================================================
+# PESTAÑAS
+# =====================================================
 
-st.subheader(f"Palabra: {palabra}")
-
-articulo_usuario = st.selectbox(
-    "Selecciona el artículo",
-    ["der", "die", "das"]
+tab1, tab2, tab3 = st.tabs(
+    [
+        "📚 Vocabulario",
+        "📝 Verbos",
+        "🎯 Examen"
+    ]
 )
 
-traduccion_usuario = st.text_input(
-    "Escribe la traducción al español"
-)
+# =====================================================
+# SUSTANTIVOS
+# =====================================================
 
-# Comprobar
-if st.button("Comprobar"):
+with tab1:
 
-    articulo_correcto = str(fila["Artículo"]).strip().lower()
-    traduccion_correcta = str(fila["Traducción al español"]).strip().lower()
+    st.header("📚 Vocabulario")
 
-    articulo_ok = articulo_usuario.lower() == articulo_correcto
-    traduccion_ok = (
-        traduccion_usuario.strip().lower()
-        == traduccion_correcta
+    @st.cache_data
+    def cargar_vocabulario():
+        return pd.read_excel(
+            "datos/sustantivos_aleman_100_mas_sin_frases.xlsx"
+        )
+
+    df = cargar_vocabulario()
+
+    # Inicializar palabra actual
+    if "indice_vocabulario" not in st.session_state:
+        st.session_state.indice_vocabulario = (
+            df.sample().index[0]
+        )
+
+    fila = df.loc[
+        st.session_state.indice_vocabulario
+    ]
+
+    palabra = fila["Palabra en alemán"]
+
+    st.subheader(
+        f"Palabra: {palabra}"
     )
 
-    if articulo_ok and traduccion_ok:
-        st.success("✅ Todo correcto")
-        st.session_state.aciertos += 1
+    articulo_usuario = st.selectbox(
+        "Selecciona el artículo",
+        ["der", "die", "das"],
+        key="articulo_vocabulario"
+    )
 
-    else:
-        st.session_state.fallos += 1
+    traduccion_usuario = st.text_input(
+        "Escribe la traducción al español",
+        key="traduccion_vocabulario"
+    )
 
-        if not articulo_ok:
-            st.error(
-                f"Artículo incorrecto. Correcto: {articulo_correcto}"
+    if st.button(
+        "✅ Comprobar",
+        key="comprobar_vocabulario"
+    ):
+
+        articulo_correcto = (
+            str(fila["Artículo"])
+            .strip()
+            .lower()
+        )
+
+        traduccion_correcta = (
+            str(
+                fila["Traducción al español"]
+            )
+            .strip()
+            .lower()
+        )
+
+        articulo_ok = (
+            articulo_usuario.lower()
+            ==
+            articulo_correcto
+        )
+
+        traduccion_ok = (
+            traduccion_usuario.strip().lower()
+            ==
+            traduccion_correcta
+        )
+
+        if articulo_ok and traduccion_ok:
+
+            st.success(
+                "✅ Artículo y traducción correctos"
             )
 
-        if not traduccion_ok:
-            st.error(
-                f"Traducción incorrecta. Correcta: {traduccion_correcta}"
+            st.session_state.aciertos += 1
+
+        else:
+
+            st.session_state.fallos += 1
+
+            if not articulo_ok:
+
+                st.error(
+                    f"Artículo correcto: "
+                    f"{fila['Artículo']}"
+                )
+
+            if not traduccion_ok:
+
+                st.error(
+                    f"Traducción correcta: "
+                    f"{fila['Traducción al español']}"
+                )
+
+    if st.button(
+        "➡️ Siguiente palabra",
+        key="siguiente_vocabulario"
+    ):
+
+        nuevo_indice = (
+            df.sample().index[0]
+        )
+
+        while (
+            nuevo_indice
+            ==
+            st.session_state.indice_vocabulario
+        ):
+            nuevo_indice = (
+                df.sample().index[0]
             )
 
-# Siguiente palabra
-if st.button("Siguiente palabra"):
+        st.session_state.indice_vocabulario = (
+            nuevo_indice
+        )
 
-    nuevo_indice = df.sample().index[0]
+        st.rerun()
 
-    while nuevo_indice == st.session_state.indice:
-        nuevo_indice = df.sample().index[0]
+# =====================================================
+# VERBOS
+# =====================================================
 
-    st.session_state.indice = nuevo_indice
-    st.rerun()
+with tab2:
 
-# Reiniciar estadísticas
-if st.button("Reiniciar estadísticas"):
+    st.header("📝 Verbos")
+
+    @st.cache_data
+    def cargar_verbos():
+        return pd.read_excel(
+            "datos/verbos_aleman.xlsx"
+        )
+
+    verbos = cargar_verbos()
+
+    personas = [
+        "ich",
+        "du",
+        "er/sie/es",
+        "wir",
+        "ihr",
+        "sie/Sie"
+    ]
+
+    if "indice_verbo" not in st.session_state:
+
+        st.session_state.indice_verbo = (
+            verbos.sample().index[0]
+        )
+
+        st.session_state.persona = (
+            random.choice(personas)
+        )
+
+    fila = verbos.loc[
+        st.session_state.indice_verbo
+    ]
+
+    infinitivo = fila["Infinitivo"]
+
+    persona = (
+        st.session_state.persona
+    )
+
+    st.subheader(
+        f"Conjuga '{infinitivo}' "
+        f"para '{persona}'"
+    )
+
+    conjugacion_usuario = (
+        st.text_input(
+            "Conjugación",
+            key="conjugacion"
+        )
+    )
+
+    significado_usuario = (
+        st.text_input(
+            "Significado en español",
+            key="significado"
+        )
+    )
+
+    if st.button(
+        "Comprobar verbo"
+    ):
+
+        conjugacion_ok = (
+            conjugacion_usuario
+            .strip()
+            .lower()
+            ==
+            str(fila[persona])
+            .strip()
+            .lower()
+        )
+
+        significado_ok = (
+            significado_usuario
+            .strip()
+            .lower()
+            ==
+            str(fila["Español"])
+            .strip()
+            .lower()
+        )
+
+        if (
+            conjugacion_ok
+            and significado_ok
+        ):
+
+            st.success(
+                "✅ Correcto"
+            )
+
+            st.session_state.aciertos += 1
+
+        else:
+
+            st.session_state.fallos += 1
+
+            st.error(
+                f"Conjugación correcta: "
+                f"{fila[persona]}"
+            )
+
+            st.error(
+                f"Significado correcto: "
+                f"{fila['Español']}"
+            )
+
+    if st.button(
+        "Siguiente verbo"
+    ):
+
+        st.session_state.indice_verbo = (
+            verbos.sample().index[0]
+        )
+
+        st.session_state.persona = (
+            random.choice(personas)
+        )
+
+        st.rerun()
+
+# =====================================================
+# EXAMEN (FUTURO)
+# =====================================================
+
+with tab3:
+
+    st.header("🎯 Examen mixto")
+
+    st.info(
+        "Próximamente: mezclará "
+        "sustantivos, verbos, "
+        "adjetivos y preposiciones."
+    )
+
+# =====================================================
+# REINICIAR
+# =====================================================
+
+st.divider()
+
+if st.button(
+    "🔄 Reiniciar estadísticas"
+):
     st.session_state.aciertos = 0
     st.session_state.fallos = 0
     st.rerun()
